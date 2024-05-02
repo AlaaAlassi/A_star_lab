@@ -29,6 +29,17 @@ void printState(int i, int j, State state)
     }
 }
 
+struct Node
+{
+    Node(int i,int j):i_(i),j_(j){};
+    int i_,j_;
+    bool visited = false;
+    int h_val;
+    int g_val;
+};
+
+
+
 int main(){
 
     // create a map
@@ -44,9 +55,17 @@ int main(){
                 grid[i][j] = State::empty;
             }else{
                 grid[i][j] = State::obstacle;
-                printState(i,j,grid[i][j]);
             }
         }
+    }
+
+    Node start(0,0);
+    Node goal(2,2);
+
+    vector<Node> openlist;
+
+    while(false){
+
     }
 
     
