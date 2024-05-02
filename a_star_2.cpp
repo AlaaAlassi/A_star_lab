@@ -1,10 +1,7 @@
-
-
-
 #include<iostream>
 #include<vector>
-
-
+#include<cmath>
+#include<algorithm>
 
 // state enum
 
@@ -29,16 +26,67 @@ void printState(int i, int j, State state)
     }
 }
 
-struct Node
+struct Node_base
 {
-    Node(int i,int j):i_(i),j_(j){};
-    int i_,j_;
-    bool visited = false;
-    int h_val;
-    int g_val;
+    int goal_i= 0 ;
+
 };
 
+struct Node
+{
+    Node(int i,int j, Node* parent):i_(i),j_(j),parent_(parent){};
+    int i_,j_;
+    bool visited = false;
+    int h_val = 1000;
+    int g_val = 0;
+    int f_val = 1000;
+    Node *parent_;
+    void cal_h(Node goal){
+        h_val = abs(goal.i_ - this->i_) + abs(goal.j_ - this->j_);
+    }
+    void cal_f(Node goal){
+        cal_h(goal);
+        if(parent_ == nullptr) 
+            f_val = h_val;
+        else{
+            f_val = h_val + parent_->g_val+1;
+            }
+    }
+};
 
+bool isValid(int i, int j, vector<vector<State>> &grid)
+{
+    if (i >= grid.size() || j >= grid[0].size() || i < 0 || j < 0)
+    {
+        return false;
+    }
+    if (grid[i][j] == State::obstacle)
+    {
+        return false;
+    }
+    return true;
+}
+
+void expand(Node goal,Node &node, vector<Node> &openlist, vector<vector<State>> &grid)
+{
+    uint numOfSteps = 4;
+    int steps[numOfSteps][2] = {{ 1,  0},
+                       {-1,  0},
+                       { 0,  1},
+                       { 0, -1}};
+    for(int i = 0; i< numOfSteps;i++){
+        int r_idx = node.i_ + steps[i][0];
+        int c_idx = node.j_ + steps[i][1];
+        if(isValid(r_idx,c_idx,grid)){
+            openlist.emplace_back(r_idx,c_idx,&node);
+            openlist.back().cal_h(goal);
+            openlist.back().cal_f(goal);
+            openlist.back().visited = true;
+            grid[r_idx][c_idx] = State::obstacle;
+
+        }
+    }
+}
 
 int main(){
 
@@ -59,12 +107,24 @@ int main(){
         }
     }
 
-    Node start(0,0);
-    Node goal(2,2);
+    Node start(0,0,nullptr);
+    Node goal(2,2,nullptr);
 
-    vector<Node> openlist;
+    start.cal_f(goal);
 
-    while(false){
+    vector<Node> openlist = {start};
+
+    while(!openlist.empty()){
+        sort(openlist.begin(),openlist.end(),[](const Node &a, const Node &b){return a.f_val > b.f_val;});
+        Node node = openlist.back();
+              openlist.pop_back();
+        if(node.h_val == 0){
+            cout << "path found" << endl;
+            return 0;
+        }
+        cout << node.i_ << "," << node.j_ << endl;
+        expand(goal,node,openlist,grid);
+  
 
     }
 
