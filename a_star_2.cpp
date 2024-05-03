@@ -2,6 +2,7 @@
 #include<vector>
 #include<cmath>
 #include<algorithm>
+#include<memory>
 
 // state enum
 
@@ -78,7 +79,8 @@ void expand(Node goal,Node &node, vector<Node> &openlist, vector<vector<State>> 
         int r_idx = node.i_ + steps[i][0];
         int c_idx = node.j_ + steps[i][1];
         if(isValid(r_idx,c_idx,grid)){
-            openlist.emplace_back(r_idx,c_idx,&node);
+             Node* parentPtr = new Node(node.i_, node.j_, node.parent_);
+            openlist.emplace_back(r_idx,c_idx,parentPtr);
             openlist.back().cal_h(goal);
             openlist.back().cal_f(goal);
             openlist.back().visited = true;
@@ -93,9 +95,9 @@ int main(){
     // create a map
     size_t col = 3;
     size_t row = 3;
-    int map_array[col][row] = {{0, 1, 0},
-                               {0, 1, 0},
-                               {0, 0, 0}};
+    int map_array[col][row] = {{0, 0, 0},
+                               {1, 1, 0},
+                               {0, 1, 0}};
     vector<vector<State>> grid(row,vector<State>(col,State::empty));
     for(int i=0; i<row; i++){
         for(int j=0; j<col; j++){
@@ -114,19 +116,25 @@ int main(){
 
     vector<Node> openlist = {start};
 
-    while(!openlist.empty()){
-        sort(openlist.begin(),openlist.end(),[](const Node &a, const Node &b){return a.f_val > b.f_val;});
+    vector<Node> path;
+
+    while (!openlist.empty())
+    {
+        sort(openlist.begin(), openlist.end(), [](const Node &a, const Node &b)
+             { return a.f_val > b.f_val; });
         Node node = openlist.back();
-              openlist.pop_back();
-        if(node.h_val == 0){
+        openlist.pop_back();
+        if (node.h_val == 0)
+        {
             cout << "path found" << endl;
+            Node *curreNode = &node;
+            while(curreNode != nullptr)
+            {
+                cout << curreNode->i_ << " " << curreNode->j_ << " " << curreNode << " parent " << curreNode->parent_ << endl;
+                curreNode = curreNode->parent_;
+            }
             return 0;
         }
-        cout << node.i_ << "," << node.j_ << endl;
-        expand(goal,node,openlist,grid);
-  
-
+        expand(goal, node, openlist, grid);
     }
-
-    
 }
