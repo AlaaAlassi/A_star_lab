@@ -27,76 +27,106 @@ void printState(int i, int j, State state)
     }
 }
 
-struct Node_base
-{
-    int goal_i= 0 ;
-
+struct Point {
+    Point(int i,int j):i_(i),j_(j){};
+    int i_ ;
+    int j_ ;
+    void print(){
+        cout << "i:" << i_<< ",j:" << j_ << endl;
+    }
 };
+
 
 struct Node
 {
-    Node(int i,int j, Node* parent):i_(i),j_(j),parent_(parent){};
-    int i_,j_;
-    bool visited = false;
-    int h_val = 1000;
+    Node(Point coordiates):coordiates_(coordiates){};
+    Point coordiates_;
     int g_val = 0;
-    int f_val = 1000;
-    Node *parent_;
-    void cal_h(Node goal){
-        h_val = abs(goal.i_ - this->i_) + abs(goal.j_ - this->j_);
+    int f_val = 0;
+    shared_ptr<Node> parent_;
+    void setParent(shared_ptr<Node> parent){
+        parent_ = parent;
+        this->g_val = parent->g_val+1;
     }
-    void cal_f(Node goal){
-        cal_h(goal);
-        if(parent_ == nullptr) 
-            f_val = h_val;
-        else{
-            f_val = h_val + parent_->g_val+1;
-            }
-    }
+
+    void setFval(int h_val){
+         f_val = h_val + g_val;
+    }       
+    
 };
 
-bool isValid(int i, int j, vector<vector<State>> &grid)
-{
-    if (i >= grid.size() || j >= grid[0].size() || i < 0 || j < 0)
-    {
-        return false;
-    }
-    if (grid[i][j] == State::obstacle)
-    {
-        return false;
-    }
-    return true;
-}
 
-void expand(Node goal,Node &node, vector<Node> &openlist, vector<vector<State>> &grid)
+class Planner
 {
-    uint numOfSteps = 4;
-    int steps[numOfSteps][2] = {{ 1,  0},
-                       {-1,  0},
-                       { 0,  1},
-                       { 0, -1}};
-    for(int i = 0; i< numOfSteps;i++){
-        int r_idx = node.i_ + steps[i][0];
-        int c_idx = node.j_ + steps[i][1];
-        if(isValid(r_idx,c_idx,grid)){
-             Node* parentPtr = new Node(node.i_, node.j_, node.parent_);
-            openlist.emplace_back(r_idx,c_idx,parentPtr);
-            openlist.back().cal_h(goal);
-            openlist.back().cal_f(goal);
-            openlist.back().visited = true;
-            grid[r_idx][c_idx] = State::obstacle;
+    Point _start;
+    Point _goal;
 
+public:
+    Planner(Point start, Point goal,vector<vector<State>> &grid) : _start(start), _goal(goal){
+        grid_ = &grid;
+        openlist_.push_back(make_shared<Node>(_start));
+    };
+
+    vector<shared_ptr<Node>> openlist_;
+    vector<vector<State>> * grid_;
+
+    int cal_h(Point b)
+    {
+        return abs(_goal.i_ - b.i_) + abs(_goal.j_ - b.j_);
+    }
+
+        void addToOpenList(shared_ptr<Node> candiadateNode, shared_ptr<Node> parent)
+    {
+        candiadateNode->setParent(parent);
+        auto hval = this->cal_h(candiadateNode->coordiates_);
+        candiadateNode->setFval(hval);
+        openlist_.push_back(candiadateNode);
+    }
+
+    bool isValid(int i, int j)
+    {
+        if (i >= grid_->size() || j >= grid_[0].size() || i < 0 || j < 0)
+        {
+            return false;
+        }
+        if ((*grid_)[i][j] == State::obstacle)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    void expand(shared_ptr<Node> node)
+    {
+        uint numOfSteps = 4;
+        int steps[numOfSteps][2] = {{1, 0},
+                                    {-1, 0},
+                                    {0, 1},
+                                    {0, -1}};
+        for (int i = 0; i < numOfSteps; i++)
+        {
+            int r_idx = node->coordiates_.i_ + steps[i][0];
+            int c_idx = node->coordiates_.j_ + steps[i][1];
+            if (isValid(r_idx, c_idx))
+            {
+                auto candidateNode = std::make_shared<Node>(Point(r_idx, c_idx));
+
+                addToOpenList(candidateNode,node);
+                (*grid_)[r_idx][c_idx] = State::obstacle;
+            }
         }
     }
-}
+
+};
+
 
 int main(){
 
     // create a map
     size_t col = 3;
     size_t row = 3;
-    int map_array[col][row] = {{0, 0, 0},
-                               {1, 1, 0},
+    int map_array[col][row] = {{0, 1, 0},
+                               {0, 0, 0},
                                {0, 1, 0}};
     vector<vector<State>> grid(row,vector<State>(col,State::empty));
     for(int i=0; i<row; i++){
@@ -109,32 +139,30 @@ int main(){
         }
     }
 
-    Node start(0,0,nullptr);
-    Node goal(2,2,nullptr);
+    shared_ptr<Node> start = make_shared<Node>(Point(0,0));
+    shared_ptr<Node> goal = make_shared<Node>(Point(2,2));
 
-    start.cal_f(goal);
+    Planner myPlanner(start->coordiates_,goal->coordiates_,grid);
 
-    vector<Node> openlist = {start};
 
-    vector<Node> path;
-
-    while (!openlist.empty())
+    while (!myPlanner.openlist_.empty())
     {
-        sort(openlist.begin(), openlist.end(), [](const Node &a, const Node &b)
-             { return a.f_val > b.f_val; });
-        Node node = openlist.back();
-        openlist.pop_back();
-        if (node.h_val == 0)
+        sort(myPlanner.openlist_.begin(), myPlanner.openlist_.end(), [](shared_ptr<Node> a, shared_ptr<Node> b)
+             { return a->f_val > b->f_val; });
+        shared_ptr <Node> node = myPlanner.openlist_.back();
+        myPlanner.openlist_.pop_back();
+        if (myPlanner.cal_h(node->coordiates_) == 0)
         {
             cout << "path found" << endl;
-            Node *curreNode = &node;
-            while(curreNode != nullptr)
+            while (node != nullptr)
             {
-                cout << curreNode->i_ << " " << curreNode->j_ << " " << curreNode << " parent " << curreNode->parent_ << endl;
-                curreNode = curreNode->parent_;
+                cout << node->coordiates_.i_  <<"," <<node->coordiates_.j_ << " node adress " << node << " parent adress "<< node->parent_ << endl;
+                node = node->parent_;
+                
             }
+            
             return 0;
         }
-        expand(goal, node, openlist, grid);
+        myPlanner.expand(node);
     }
 }
