@@ -125,8 +125,8 @@ int main(){
     // create a map
     size_t col = 3;
     size_t row = 3;
-    int map_array[col][row] = {{0, 0, 0},
-                               {1, 1, 0},
+    int map_array[col][row] = {{0, 1, 0},
+                               {0, 0, 0},
                                {0, 1, 0}};
     vector<vector<State>> grid(row,vector<State>(col,State::empty));
     for(int i=0; i<row; i++){
@@ -154,6 +154,13 @@ int main(){
         if (myPlanner.cal_h(node->coordiates_) == 0)
         {
             cout << "path found" << endl;
+            while (node != nullptr)
+            {
+                cout << node->coordiates_.i_  <<"," <<node->coordiates_.j_ << " node adress " << node << " parent adress "<< node->parent_ << endl;
+                node = node->parent_;
+                
+            }
+            
             return 0;
         }
         myPlanner.expand(node);
